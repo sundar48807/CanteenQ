@@ -12,7 +12,7 @@
         "*.local"
       ],
       "predeploy": [
-        "cmd /c \"cd /d $RESOURCE_DIR && npm run lint\""
+        "cd functions && npm run lint"
       ]
     }
   ],
