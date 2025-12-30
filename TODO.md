@@ -7,3 +7,6 @@
 - [x] Complete the useQueue hook functions (addToken, updateTokenStatus, etc.)
 - [x] Test the migration to ensure data persists across sessions
 - [x] Remove localStorage dependencies from useQueue hook
+- [x] Fix LiveStatus component to use shared Firebase config
+- [x] Update Firebase Function to be callable for getToken
+- [ ] Test the LiveStatus component with Firebase Functions

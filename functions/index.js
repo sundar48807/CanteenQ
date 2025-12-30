@@ -1,22 +1,18 @@
 const functions = require("firebase-functions");
-const express = require("express");
-const cors = require("cors");
-
-const app = express();
-app.use(cors());
-app.use(express.json());
 
 let currentToken = 0;
 
-// Hardware updates token here
-app.post("/updateToken", (req, res) => {
-  currentToken = req.body.token;
-  res.json({success: true});
+// Callable function for getting current token
+exports.getToken = functions.https.onCall((data, context) => {
+  return { token: currentToken };
 });
 
-// Frontend reads token here
-app.get("/getToken", (req, res) => {
-  res.json({token: currentToken});
+// HTTP function for updating token (for hardware)
+exports.updateToken = functions.https.onRequest((req, res) => {
+  if (req.method === 'POST') {
+    currentToken = req.body.token;
+    res.json({ success: true });
+  } else {
+    res.status(405).json({ error: 'Method not allowed' });
+  }
 });
-
-exports.api = functions.https.onRequest(app);

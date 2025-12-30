@@ -1,16 +1,7 @@
 import { useEffect, useState } from "react";
 import { getFunctions, httpsCallable } from "firebase/functions";
-import { initializeApp } from "firebase/app";
-import { getAuth } from "firebase/auth";
+import { app } from "../src/firebase";
 
-// Firebase config (should match your firebase.js)
-const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
-};
-
-const app = initializeApp(firebaseConfig);
 const functions = getFunctions(app);
 
 export default function LiveStatus() {
