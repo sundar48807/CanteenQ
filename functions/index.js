@@ -11,12 +11,12 @@ let currentToken = 0;
 // Hardware updates token here
 app.post("/updateToken", (req, res) => {
   currentToken = req.body.token;
-  res.json({ success: true });
+  res.json({success: true});
 });
 
 // Frontend reads token here
 app.get("/getToken", (req, res) => {
-  res.json({ token: currentToken });
+  res.json({token: currentToken});
 });
 
 exports.api = functions.https.onRequest(app);
