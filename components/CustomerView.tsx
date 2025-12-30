@@ -10,7 +10,7 @@ interface CustomerViewProps {
   allTokens: Token[];
   dishOfTheDay: Dish | null;
   menuItems: MenuItem[];
-  onBookToken: (name: string, phone: string) => Token;
+  onBookToken: (name: string, phone: string) => Promise<Token>;
 }
 
 const CUSTOMER_TOKEN_ID_KEY = 'customer_token_id';

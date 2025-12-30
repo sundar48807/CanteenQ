@@ -18,8 +18,8 @@ function App() {
       toggleMenuItemAvailability
   } = useQueue();
 
-  const handleBookToken = (name: string, phone: string): Token => {
-    return addToken(name, phone);
+  const handleBookToken = async (name: string, phone: string): Promise<Token> => {
+    return await addToken(name, phone);
   };
 
   return (

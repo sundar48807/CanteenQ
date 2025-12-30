@@ -2,9 +2,9 @@ import { initializeApp } from "firebase/app";
 import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
-  apiKey: "YOUR_API_KEY",
-  authDomain: "your-project.firebaseapp.com",
-  projectId: "your-project-id",
+  apiKey: process.env.REACT_APP_FIREBASE_API_KEY || "YOUR_API_KEY",
+  authDomain: "canteen-q-dca20.firebaseapp.com",
+  projectId: "canteen-q-dca20",
 };
 
 const app = initializeApp(firebaseConfig);

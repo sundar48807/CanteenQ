@@ -1,5 +1,5 @@
 import { collection, getDocs, addDoc } from "firebase/firestore";
-import { db } from "./firebase";
+import { db } from "../firebase";
 
 // READ (replaces GET localhost)
 export async function getOrders() {

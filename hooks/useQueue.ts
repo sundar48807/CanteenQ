@@ -1,86 +1,59 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Token, TokenStatus, Dish, MenuItem } from '../types';
-
-const STORAGE_KEY = 'canteen_queue';
-const DISH_OF_THE_DAY_KEY = 'canteen_dish_of_the_day';
-const MENU_STORAGE_KEY = 'canteen_menu';
-
-// Helper to handle Date objects during JSON serialization/deserialization
-const reviver = (key: string, value: any) => {
-    if ((key === 'bookingTime' || key === 'statusChangeTime') && typeof value === 'string') {
-        return new Date(value);
-    }
-    return value;
-};
-
-const defaultMenuItems: MenuItem[] = [
-  { id: 's1', name: 'Veggie Delight Sandwich', category: 'Sandwiches', price: '₹120', isAvailable: true },
-  { id: 's2', name: 'Chicken Tikka Sandwich', category: 'Sandwiches', price: '₹150', isAvailable: true },
-  { id: 'p1', name: 'Margherita Pizza', category: 'Pizza', price: '₹250', isAvailable: true },
-  { id: 'p2', name: 'Pepperoni Pizza', category: 'Pizza', price: '₹300', isAvailable: true },
-  { id: 'sa1', name: 'Classic Caesar Salad', category: 'Salads', price: '₹180', isAvailable: true },
-  { id: 'b1', name: 'Espresso Coffee', category: 'Beverages', price: '₹80', isAvailable: true },
-  { id: 'b2', name: 'Iced Tea', category: 'Beverages', price: '₹70', isAvailable: true },
-];
+import {
+    getTokens,
+    addToken as addTokenToFirestore,
+    updateToken as updateTokenInFirestore,
+    deleteToken,
+    subscribeToTokens,
+    getDishOfTheDay,
+    setDishOfTheDay as setDishOfTheDayInFirestore,
+    subscribeToDishOfTheDay,
+    getMenuItems,
+    updateMenuItem as updateMenuItemInFirestore,
+    subscribeToMenuItems
+} from '../src/services/queueService';
 
 export const useQueue = () => {
-    const [tokens, setTokens] = useState<Token[]>(() => {
-        try {
-            const storedTokens = localStorage.getItem(STORAGE_KEY);
-            return storedTokens ? JSON.parse(storedTokens, reviver) : [];
-        } catch (error) {
-            console.error("Error reading tokens from localStorage", error);
-            return [];
-        }
-    });
+    const [tokens, setTokens] = useState<Token[]>([]);
+    const [dishOfTheDay, setDishOfTheDay] = useState<Dish | null>(null);
+    const [menuItems, setMenuItems] = useState<MenuItem[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
 
-    const [dishOfTheDay, setDishOfTheDay] = useState<Dish | null>(() => {
-        try {
-            const storedDish = localStorage.getItem(DISH_OF_THE_DAY_KEY);
-            return storedDish ? JSON.parse(storedDish) : null;
-        } catch (error) {
-            console.error("Error reading dish of the day from localStorage", error);
-            return null;
-        }
-    });
-
-    const [menuItems, setMenuItems] = useState<MenuItem[]>(() => {
-        try {
-            const storedMenu = localStorage.getItem(MENU_STORAGE_KEY);
-            return storedMenu ? JSON.parse(storedMenu) : defaultMenuItems;
-        } catch (error) {
-            console.error("Error reading menu from localStorage", error);
-            return defaultMenuItems;
-        }
-    });
-
+    // Load initial data
     useEffect(() => {
-        try {
-            localStorage.setItem(STORAGE_KEY, JSON.stringify(tokens));
-        } catch (error) {
-            console.error("Error writing tokens to localStorage", error);
-        }
-    }, [tokens]);
-    
-    useEffect(() => {
-        try {
-            localStorage.setItem(MENU_STORAGE_KEY, JSON.stringify(menuItems));
-        } catch (error) {
-            console.error("Error writing menu to localStorage", error);
-        }
-    }, [menuItems]);
-
-    useEffect(() => {
-        try {
-            if (dishOfTheDay) {
-                localStorage.setItem(DISH_OF_THE_DAY_KEY, JSON.stringify(dishOfTheDay));
-            } else {
-                localStorage.removeItem(DISH_OF_THE_DAY_KEY);
+        const loadInitialData = async () => {
+            try {
+                const [tokensData, dishData, menuData] = await Promise.all([
+                    getTokens(),
+                    getDishOfTheDay(),
+                    getMenuItems()
+                ]);
+                setTokens(tokensData);
+                setDishOfTheDay(dishData);
+                setMenuItems(menuData);
+            } catch (error) {
+                console.error("Error loading initial data", error);
+            } finally {
+                setIsLoading(false);
             }
-        } catch (error) {
-            console.error("Error writing dish of the day to localStorage", error);
-        }
-    }, [dishOfTheDay]);
+        };
+
+        loadInitialData();
+    }, []);
+
+    // Subscribe to real-time updates
+    useEffect(() => {
+        const unsubscribeTokens = subscribeToTokens(setTokens);
+        const unsubscribeDish = subscribeToDishOfTheDay(setDishOfTheDay);
+        const unsubscribeMenu = subscribeToMenuItems(setMenuItems);
+
+        return () => {
+            unsubscribeTokens();
+            unsubscribeDish();
+            unsubscribeMenu();
+        };
+    }, []);
     
     // Effect for auto-completing stale 'READY' tokens
     useEffect(() => {
@@ -108,7 +81,7 @@ export const useQueue = () => {
         return () => clearInterval(intervalId); // Cleanup on unmount
     }, []); // Empty dependency array ensures this runs only once
 
-    const addToken = useCallback((customerName: string, phoneNumber: string): Token => {
+    const addToken = useCallback(async (customerName: string, phoneNumber: string): Promise<Token> => {
         const newId = tokens.length > 0 ? Math.max(...tokens.map(t => t.id)) + 1 : 101;
         const newToken: Token = {
             id: newId,
@@ -118,33 +91,29 @@ export const useQueue = () => {
             bookingTime: new Date(),
             statusChangeTime: new Date(),
         };
-        setTokens(prevTokens => [...prevTokens, newToken]);
+        await addTokenToFirestore(newToken);
         return newToken;
     }, [tokens]);
 
-    const updateTokenStatus = useCallback((tokenId: number, newStatus: TokenStatus) => {
-        setTokens(prevTokens =>
-            prevTokens.map(token =>
-                token.id === tokenId ? { ...token, status: newStatus, statusChangeTime: new Date() } : token
-            )
-        );
-    }, []);
-    
-    const updateDishOfTheDay = useCallback((dish: Dish) => {
-        setDishOfTheDay(dish);
+    const updateTokenStatus = useCallback(async (tokenId: number, newStatus: TokenStatus) => {
+        await updateTokenInFirestore(tokenId, { status: newStatus, statusChangeTime: new Date() });
     }, []);
 
-    const clearCompletedTokens = useCallback(() => {
-        setTokens(prevTokens => prevTokens.filter(token => token.status !== TokenStatus.COMPLETED));
+    const updateDishOfTheDay = useCallback(async (dish: Dish) => {
+        await setDishOfTheDayInFirestore(dish);
     }, []);
-    
-    const toggleMenuItemAvailability = useCallback((itemId: string) => {
-        setMenuItems(prevItems => 
-            prevItems.map(item => 
-                item.id === itemId ? { ...item, isAvailable: !item.isAvailable } : item
-            )
-        );
-    }, []);
+
+    const clearCompletedTokens = useCallback(async () => {
+        const completedTokens = tokens.filter(token => token.status === TokenStatus.COMPLETED);
+        await Promise.all(completedTokens.map(token => deleteToken(token.id)));
+    }, [tokens]);
+
+    const toggleMenuItemAvailability = useCallback(async (itemId: string) => {
+        const item = menuItems.find(item => item.id === itemId);
+        if (item) {
+            await updateMenuItemInFirestore(itemId, { isAvailable: !item.isAvailable });
+        }
+    }, [menuItems]);
 
     return { tokens, addToken, updateTokenStatus, dishOfTheDay, updateDishOfTheDay, clearCompletedTokens, menuItems, toggleMenuItemAvailability };
 };

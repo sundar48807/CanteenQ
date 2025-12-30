@@ -8,8 +8,9 @@ const BookingForm: React.FC<BookingFormProps> = ({ onBookToken }) => {
     const [name, setName] = useState('');
     const [phone, setPhone] = useState('');
     const [error, setError] = useState('');
+    const [isLoading, setIsLoading] = useState(false);
 
-    const handleSubmit = (e: React.FormEvent) => {
+    const handleSubmit = async (e: React.FormEvent) => {
         e.preventDefault();
         if (!name.trim() || !phone.trim()) {
             setError('Please enter both your name and phone number.');
@@ -20,7 +21,14 @@ const BookingForm: React.FC<BookingFormProps> = ({ onBookToken }) => {
             return;
         }
         setError('');
-        onBookToken(name, phone);
+        setIsLoading(true);
+        try {
+            await onBookToken(name, phone);
+        } catch (error) {
+            setError('Failed to book token. Please try again.');
+        } finally {
+            setIsLoading(false);
+        }
     };
 
     return (
