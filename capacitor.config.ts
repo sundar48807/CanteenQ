@@ -6,7 +6,7 @@ const config: CapacitorConfig = {
   webDir: 'dist',
   server: {
     // REPLACE WITH YOUR PC's IP ADDRESS (Method A above)
-    url: 'http://192.168.1.15:3000', 
+    url: 'http://localhost:3000', 
     cleartext: true
   }
 };
